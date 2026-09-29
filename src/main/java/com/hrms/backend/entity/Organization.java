@@ -1,6 +1,5 @@
 package com.hrms.backend.entity;
 
-// You can remove import lombok.Data; and @Data if Lombok isn't working
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -22,7 +21,10 @@ public class Organization {
     private String address;
     private String contactEmail;
 
-    // Manual Getters and Setters to bypass Eclipse Lombok issue
+    @Column(name = "logo_path")
+    private String logoPath;
+
+    // Manual Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -34,4 +36,7 @@ public class Organization {
 
     public String getContactEmail() { return contactEmail; }
     public void setContactEmail(String contactEmail) { this.contactEmail = contactEmail; }
+
+    public String getLogoPath() { return logoPath; }
+    public void setLogoPath(String logoPath) { this.logoPath = logoPath; }
 }

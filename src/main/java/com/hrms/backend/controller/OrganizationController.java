@@ -3,10 +3,18 @@ package com.hrms.backend.controller;
 import com.hrms.backend.dto.OrganizationDTO;
 import com.hrms.backend.entity.Organization;
 import com.hrms.backend.service.OrganizationService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/organizations")
@@ -18,10 +26,44 @@ public class OrganizationController {
         this.organizationService = organizationService;
     }
 
-    @PostMapping
-    public ResponseEntity<Organization> createOrganization(@RequestBody Organization organization) {
-        Organization savedOrg = organizationService.saveOrganization(organization);
-        return ResponseEntity.ok(savedOrg);
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, String>> createOrganization(
+            @RequestParam("name") String name,
+            @RequestParam("address") String address,
+            @RequestParam("contactEmail") String contactEmail,
+            @RequestParam(value = "logo", required = false) MultipartFile logoFile) {
+        
+        try {
+            Organization org = new Organization();
+            org.setName(name);
+            org.setAddress(address);
+            org.setContactEmail(contactEmail);
+
+            if (logoFile != null && !logoFile.isEmpty()) {
+                String uploadDir = "uploads/logos/";
+                Path uploadPath = Paths.get(uploadDir);
+                
+                if (!Files.exists(uploadPath)) {
+                    Files.createDirectories(uploadPath);
+                }
+
+                String fileName = UUID.randomUUID().toString() + "_" + logoFile.getOriginalFilename();
+                Path filePath = uploadPath.resolve(fileName);
+                Files.copy(logoFile.getInputStream(), filePath);
+                
+                org.setLogoPath(uploadDir + fileName);
+            }
+
+            organizationService.saveOrganization(org);
+            
+            // RETURN TINTU'S EXACT REQUESTED JSON
+            return ResponseEntity.ok(Collections.singletonMap("message", "Organization saved successfully"));
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(
+                    Collections.singletonMap("message", "Failed to create organization: " + e.getMessage())
+            );
+        }
     }
 
     @GetMapping
