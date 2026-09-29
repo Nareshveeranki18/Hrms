@@ -3,6 +3,8 @@ package com.hrms.backend.controller;
 import com.hrms.backend.entity.User;
 import com.hrms.backend.repository.UserRepository;
 import com.hrms.backend.security.JwtUtil;
+import com.hrms.backend.service.TokenBlacklistService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +28,10 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    // Added the new TokenBlacklistService
+    @Autowired
+    private TokenBlacklistService tokenBlacklistService;
+
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> credentials) {
         String email = credentials.get("email");
@@ -43,7 +49,7 @@ public class AuthController {
             userData.put("id", user.getId());
             userData.put("email", user.getEmail());
             userData.put("role", user.getRole());
-            userData.put("fullName", user.getFullName()); // Added fullName to login response
+            userData.put("fullName", user.getFullName()); 
             response.put("user", userData);
 
             return ResponseEntity.ok(response);
@@ -68,7 +74,7 @@ public class AuthController {
         newUser.setEmail(userData.get("email"));
         newUser.setPassword(passwordEncoder.encode(userData.get("password")));
         newUser.setRole(userData.getOrDefault("role", "EMPLOYEE"));
-        newUser.setFullName(userData.get("fullName")); // Extracts and saves fullName from frontend
+        newUser.setFullName(userData.get("fullName")); 
 
         userRepository.save(newUser);
 
@@ -76,11 +82,24 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    // Updated Logout to use the Blacklist
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, String>> logout() {
+    public ResponseEntity<Map<String, String>> logout(HttpServletRequest request) {
         Map<String, String> response = new HashMap<>();
-        response.put("message", "Logged out successfully. Please remove token on client side.");
-        return ResponseEntity.ok(response);
+        String authHeader = request.getHeader("Authorization");
+
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            
+            // Save the token to the database blacklist
+            tokenBlacklistService.blacklistToken(token);
+            
+            response.put("message", "Logged out successfully.");
+            return ResponseEntity.ok(response);
+        }
+
+        response.put("message", "No Authorization header found");
+        return ResponseEntity.badRequest().body(response);
     }
 
     @PostMapping("/forgot-password")
