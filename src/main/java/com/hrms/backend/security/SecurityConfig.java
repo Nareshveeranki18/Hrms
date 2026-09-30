@@ -5,7 +5,7 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod; // ADDED THIS IMPORT
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -50,8 +50,8 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/auth/**", "/api/v1/health", "/error").permitAll()
-                // ADDED THIS LINE FOR TINTU:
-                .requestMatchers(HttpMethod.POST, "/api/organizations").permitAll()
+                // UPDATED THIS LINE to include /v1/
+                .requestMatchers(HttpMethod.POST, "/api/v1/organizations").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
