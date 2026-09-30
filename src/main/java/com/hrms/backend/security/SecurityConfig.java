@@ -49,8 +49,8 @@ public class SecurityConfig {
             .headers(headers -> headers.frameOptions(frame -> frame.disable()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/v1/auth/**", "/api/v1/health", "/error").permitAll()
-                // UPDATED THIS LINE to include /v1/
+                // Added /api/v1/s3/** to allow the frontend to request S3 upload URLs
+                .requestMatchers("/api/v1/auth/**", "/api/v1/health", "/error", "/api/v1/s3/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/organizations").permitAll()
                 .anyRequest().authenticated()
             )
