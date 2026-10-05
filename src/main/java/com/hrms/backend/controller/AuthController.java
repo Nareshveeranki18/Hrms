@@ -1,6 +1,8 @@
 package com.hrms.backend.controller;
 
+import com.hrms.backend.entity.Role;
 import com.hrms.backend.entity.User;
+import com.hrms.backend.repository.RoleRepository;
 import com.hrms.backend.repository.UserRepository;
 import com.hrms.backend.security.JwtUtil;
 import com.hrms.backend.service.TokenBlacklistService;
@@ -22,14 +24,16 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenBlacklistService tokenBlacklistService;
+    private final RoleRepository roleRepository; // Added RoleRepository
 
-    // Standard Constructor Injection (Solves the warning, no Lombok required)
     public AuthController(JwtUtil jwtUtil, UserRepository userRepository, 
-                          PasswordEncoder passwordEncoder, TokenBlacklistService tokenBlacklistService) {
+                          PasswordEncoder passwordEncoder, TokenBlacklistService tokenBlacklistService,
+                          RoleRepository roleRepository) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenBlacklistService = tokenBlacklistService;
+        this.roleRepository = roleRepository;
     }
 
     @PostMapping("/login")
@@ -48,7 +52,8 @@ public class AuthController {
             Map<String, Object> userData = new HashMap<>();
             userData.put("id", user.getId());
             userData.put("email", user.getEmail());
-            userData.put("role", user.getRole());
+            // Extract the String name from the Role object to send to the frontend
+            userData.put("role", user.getRole().getName()); 
             userData.put("fullName", user.getFullName()); 
             response.put("user", userData);
 
@@ -73,8 +78,13 @@ public class AuthController {
         User newUser = new User();
         newUser.setEmail(userData.get("email"));
         newUser.setPassword(passwordEncoder.encode(userData.get("password")));
-        newUser.setRole(userData.getOrDefault("role", "EMPLOYEE"));
         newUser.setFullName(userData.get("fullName")); 
+
+        // Fetch the actual Role object from the database using the string name
+        String roleName = userData.getOrDefault("role", "EMPLOYEE");
+        Role role = roleRepository.findByName(roleName)
+                .orElseThrow(() -> new RuntimeException("Role not found in database: " + roleName));
+        newUser.setRole(role);
 
         userRepository.save(newUser);
 
@@ -89,9 +99,7 @@ public class AuthController {
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-            
             tokenBlacklistService.blacklistToken(token);
-            
             response.put("message", "Logged out successfully.");
             return ResponseEntity.ok(response);
         }

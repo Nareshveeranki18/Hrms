@@ -31,3 +31,15 @@ build/
 
 ### VS Code ###
 .vscode/
+# Build files
+target/
+
+# IDE files
+.sts4-cache
+.settings/
+.classpath
+.project
+
+# Security
+*.pem
+*.pem.txt
