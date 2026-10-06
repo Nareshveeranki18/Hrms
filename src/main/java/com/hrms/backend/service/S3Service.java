@@ -40,4 +40,25 @@ public class S3Service {
             return "https://" + bucketName + ".s3." + region + ".amazonaws.com/" + uniqueFileName;
         }
     }
+
+    public String uploadLogo(MultipartFile file) throws IOException {
+        String uniqueFileName = "logos/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
+
+        try (S3Client s3Client = S3Client.builder()
+                .region(Region.of(region))
+                .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
+                .build()) {
+
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(uniqueFileName)
+                    .contentType(file.getContentType())
+                    .build();
+
+            s3Client.putObject(putObjectRequest, 
+                software.amazon.awssdk.core.sync.RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+            
+            return "https://" + bucketName + ".s3." + region + ".amazonaws.com/" + uniqueFileName;
+        }
+    }
 }
