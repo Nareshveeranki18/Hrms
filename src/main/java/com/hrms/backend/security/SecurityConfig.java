@@ -51,6 +51,11 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/auth/**", "/api/v1/health", "/error", "/api/v1/s3/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/organizations").permitAll()
+                
+                // Task N-6: Public access for recruitment endpoints
+                .requestMatchers(HttpMethod.GET, "/api/v1/recruitment/job-openings").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/recruitment/candidates").permitAll()
+                
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
