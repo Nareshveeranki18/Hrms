@@ -2,9 +2,13 @@ package com.hrms.backend.controller;
 
 import com.hrms.backend.dto.CandidateStatusDto;
 import com.hrms.backend.entity.Candidate;
+import com.hrms.backend.entity.Employee;
 import com.hrms.backend.entity.JobOpening;
+import com.hrms.backend.entity.Organization;
 import com.hrms.backend.repository.CandidateRepository;
+import com.hrms.backend.repository.EmployeeRepository;
 import com.hrms.backend.repository.JobOpeningRepository;
+import com.hrms.backend.repository.OrganizationRepository;
 import com.hrms.backend.service.S3Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +27,12 @@ public class RecruitmentController {
 
     @Autowired
     private CandidateRepository candidateRepository;
+
+    @Autowired
+    private EmployeeRepository employeeRepository;
+
+    @Autowired
+    private OrganizationRepository organizationRepository;
 
     @Autowired
     private S3Service s3Service;
@@ -56,6 +66,7 @@ public class RecruitmentController {
         candidate.setPhone(phone);
         candidate.setJobOpening(job);
         candidate.setResumeS3Url(s3Url);
+        candidate.setStatus("APPLIED");
 
         return ResponseEntity.ok(candidateRepository.save(candidate));
     }
@@ -75,5 +86,42 @@ public class RecruitmentController {
     @GetMapping("/candidates")
     public ResponseEntity<List<Candidate>> getAllCandidates() {
         return ResponseEntity.ok(candidateRepository.findAll());
+    }
+
+    @PostMapping("/candidates/{id}/convert")
+    public ResponseEntity<Employee> convertCandidateToEmployee(@PathVariable Long id) {
+        Candidate candidate = candidateRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Candidate not found"));
+
+        // 1. Update Candidate status
+        candidate.setStatus("CONVERTED");
+        candidateRepository.save(candidate);
+
+        // 2. Fetch default organization (or handle via tenant/org logic)
+        Organization defaultOrg = organizationRepository.findAll().stream().findFirst()
+                .orElseThrow(() -> new RuntimeException("No organization found to map employee"));
+
+        // 3. Split name into first and last name fields required by Employee entity
+        String fullName = candidate.getFullName();
+        String firstName = fullName;
+        String lastName = "N/A";
+        if (fullName != null && fullName.contains(" ")) {
+            int lastSpaceIdx = fullName.lastIndexOf(' ');
+            firstName = fullName.substring(0, lastSpaceIdx);
+            lastName = fullName.substring(lastSpaceIdx + 1);
+        }
+
+        // 4. Create and save the new Employee Record
+        Employee employee = new Employee();
+        employee.setEmployeeCode("EMP-" + System.currentTimeMillis());
+        employee.setFirstName(firstName);
+        employee.setLastName(lastName);
+        employee.setEmail(candidate.getEmail());
+        employee.setPhone(candidate.getPhone());
+        employee.setResumeS3Url(candidate.getResumeS3Url());
+        employee.setOrganization(defaultOrg);
+
+        Employee savedEmployee = employeeRepository.save(employee);
+        return ResponseEntity.ok(savedEmployee);
     }
 }

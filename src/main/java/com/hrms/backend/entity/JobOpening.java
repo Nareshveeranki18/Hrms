@@ -14,8 +14,9 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class JobOpening {
 
-    @Id
+	@Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @JsonProperty("id")
     private Long id;
 
     @JsonProperty("title")

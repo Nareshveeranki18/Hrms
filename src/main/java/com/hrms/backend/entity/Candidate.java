@@ -32,7 +32,7 @@ public class Candidate {
     @Column(updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    // Explicit Getters and Setters added to bypass Lombok IDE glitch
+    // Explicit Getters and Setters
     public Long getId() {
         return id;
     }
