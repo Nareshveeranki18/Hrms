@@ -1,27 +1,17 @@
-# HRMS API Documentation
+Markdown# HRMS API Documentation
 
-## 1. General Info
-* **Base URL:** `http://localhost:8081` (Port 8081 as per Tomcat logs)
-* **Authentication:** Login first, copy the token, and send `Authorization: Bearer <token>` on every subsequent request.
-* **Error Format:** All backend errors return a standard JSON format: `{ "message": "Reason for error..." }`
+Base URL: `http://localhost:8081/api/v1`
 
-## 2. Test Accounts
-All accounts share the same password: `Admin@123`
+## Authentication
+Protected endpoints require an `Authorization: Bearer <token>` header.
 
-| Role | Email | Permissions |
-| :--- | :--- | :--- |
-| **SUPER_ADMIN** | admin@company.com | Can access everything, including user creation. |
-| **HR_ADMIN** | hr@company.com | Recruitment, Documents. Cannot create users. |
-| **MANAGER** | manager@company.com | Dashboard only. |
-| **EMPLOYEE** | employee@company.com | Dashboard only. |
-
----
-
-## 3. Endpoints
-
-### 3.1 Login
-**POST** `/api/v1/auth/login`
-**Who:** Anyone (No token needed)
-**Request Body:**
-```json
-{ "email": "admin@company.com", "password": "Admin@123" }
+### Login
+* **URL:** `/auth/login`
+* **Method:** `POST`
+* **Body:**
+  ```json
+  {
+    "email": "admin@company.com",
+    "password": "Admin@123"
+  }
+Test AccountsRoleEmailPasswordSUPER_ADMINadmin@company.comAdmin@123HR_ADMINhr@company.comAdmin@123MANAGERmanager@company.comAdmin@123EMPLOYEEemployee@company.comAdmin@123Job OpeningsGET /job-openings - Retrieve all job postings.POST /job-openings - Create a new job opening.Candidates (Recruitment Pipeline)GET /candidates - List candidates across Kanban stages.PATCH /candidates/{id}/status - Update candidate status (APPLIED, SCREENING, INTERVIEW, OFFER).DocumentsGET /documents - List all uploaded documents.POST /documents/upload - Upload file (multipart/form-data).PATCH /documents/{id}/verify - Verify document.PATCH /documents/{id}/reject - Reject document with reason payload.EmployeesGET /employees - Retrieve employee directory and metrics.
