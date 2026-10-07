@@ -22,10 +22,9 @@ public class Employee {
     private String email;
     private String phone;
 
-    // Added these fields to match your frontend table columns!
     private String department;   // Matches "Department" column
     private String designation;  // Matches "Designation" column
-    private String status = "ACTIVE"; // Matches "Status" column (default ACTIVE)
+    private String status = "ACTIVE"; // Matches "Status" column
 
     @Column(name = "resume_s3_url")
     private String resumeS3Url;
@@ -37,7 +36,6 @@ public class Employee {
 
     public Employee() {}
 
-    // Helper method so JSON includes a combined "fullName" if your frontend expects it
     public String getFullName() {
         return firstName + " " + lastName;
     }
