@@ -7,8 +7,12 @@ import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsPro
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.UUID;
 
 @Service
@@ -20,8 +24,9 @@ public class S3Service {
     @Value("${aws.region}")
     private String region;
 
-    public String uploadResume(MultipartFile file) throws IOException {
-        String uniqueFileName = "resumes/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
+    // Generic upload method used by documents, resumes, and logos
+    public String uploadFile(MultipartFile file, String folderPrefix) throws IOException {
+        String uniqueFileName = folderPrefix + UUID.randomUUID() + "_" + file.getOriginalFilename();
 
         try (S3Client s3Client = S3Client.builder()
                 .region(Region.of(region))
@@ -41,24 +46,38 @@ public class S3Service {
         }
     }
 
-    public String uploadLogo(MultipartFile file) throws IOException {
-        String uniqueFileName = "logos/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
+    public String uploadResume(MultipartFile file) throws IOException {
+        return uploadFile(file, "resumes/");
+    }
 
-        try (S3Client s3Client = S3Client.builder()
+    public String uploadLogo(MultipartFile file) throws IOException {
+        return uploadFile(file, "logos/");
+    }
+
+    // Creates secure 15-minute viewing link
+    public String generatePresignedUrl(String fileUrl) {
+        if (fileUrl == null || fileUrl.isEmpty()) return null;
+        
+        String fileKey = fileUrl.contains(".amazonaws.com/") 
+            ? fileUrl.substring(fileUrl.indexOf(".amazonaws.com/") + 15) 
+            : fileUrl;
+
+        try (S3Presigner presigner = S3Presigner.builder()
                 .region(Region.of(region))
                 .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
                 .build()) {
 
-            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                     .bucket(bucketName)
-                    .key(uniqueFileName)
-                    .contentType(file.getContentType())
+                    .key(fileKey)
                     .build();
 
-            s3Client.putObject(putObjectRequest, 
-                software.amazon.awssdk.core.sync.RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
-            
-            return "https://" + bucketName + ".s3." + region + ".amazonaws.com/" + uniqueFileName;
+            GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                    .signatureDuration(Duration.ofMinutes(15))
+                    .getObjectRequest(getObjectRequest)
+                    .build();
+
+            return presigner.presignGetObject(presignRequest).url().toString();
         }
     }
 }

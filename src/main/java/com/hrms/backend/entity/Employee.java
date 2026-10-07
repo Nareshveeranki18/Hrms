@@ -1,5 +1,6 @@
 package com.hrms.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 @Entity
@@ -24,6 +25,8 @@ public class Employee {
     @Column(name = "resume_s3_url")
     private String resumeS3Url;
 
+    // Added this line to fix the 500 error!
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organization_id", nullable = false)
     private Organization organization;
