@@ -29,14 +29,16 @@ public class ShiftController {
         return ResponseEntity.status(status).body(Map.of("message", text));
     }
 
-    // AC: Only SUPER_ADMIN and HR_ADMIN may change shifts
+ // AC: Only SUPER_ADMIN and HR_ADMIN may change shifts
     private boolean canEdit(Authentication auth) {
         if (auth == null) return false;
+        
         return userRepository.findByEmail(auth.getName())
                 .map(u -> u.getRole() != null
-                        && ("SUPER_ADMIN".equals(u.getRole()) || "HR_ADMIN".equals(u.getRole())))
+                        && ("SUPER_ADMIN".equals(u.getRole().getName()) || "HR_ADMIN".equals(u.getRole().getName())))
                 .orElse(false);
     }
+    
 
     // AC: Validation Rules for Shifts and Night Shifts
     private String validate(Shift s) {
