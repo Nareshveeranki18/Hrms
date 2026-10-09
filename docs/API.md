@@ -1,15 +1,15 @@
 Markdown
 # HRMS API Documentation
 
-Base URL: `http://localhost:8081/api/v1`
+**Base URL:** `http://localhost:8080/api/v1`
 
 ## Authentication
 Protected endpoints require an `Authorization: Bearer <token>` header.
 
 ### Login
-* **URL:** `/auth/login`
-* **Method:** `POST`
-* **Body:**
+- **URL:** `/auth/login`
+- **Method:** `POST`
+- **Body:**
   ```json
   {
     "email": "admin@company.com",
@@ -54,3 +54,35 @@ PUT /documents/{id}/request-reupload - Request document re-upload with note payl
 
 Employees
 GET /employees - Retrieve employee directory and metrics.
+
+POST /employees - Create a new employee.
+
+POST /employees/{id}/assign-shift - Assign a shift to an employee. Payload: { "shiftId": 1 }.
+
+Shift Management
+Base URL: /shifts
+
+Method	Endpoint	Role Required	Description
+GET	/shifts	Any logged-in user	List all shifts
+POST	/shifts	SUPER_ADMIN, HR_ADMIN	Create a new shift
+PUT	/shifts/{id}	SUPER_ADMIN, HR_ADMIN	Update an existing shift
+DELETE	/shifts/{id}	SUPER_ADMIN, HR_ADMIN	Delete a shift
+JSON Payload (POST / PUT):
+
+JSON
+{
+  "name": "General Shift",
+  "startTime": "09:00",
+  "endTime": "18:00",
+  "breakDurationMinutes": 60,
+  "weeklyOffDays": ["SATURDAY", "SUNDAY"]
+}
+Validation Rules:
+
+name: 2-50 characters, must be unique.
+
+startTime / endTime: Required, cannot be equal. Night shifts (end time before start time) are fully supported.
+
+breakDurationMinutes: 0-240 minutes, must be less than total shift duration.
+
+Delete Restriction: Cannot delete a shift if it is actively assigned to an employee (returns 409 Conflict).

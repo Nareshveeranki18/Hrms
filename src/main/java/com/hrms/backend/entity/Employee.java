@@ -34,6 +34,11 @@ public class Employee {
     @JoinColumn(name = "organization_id", nullable = false)
     private Organization organization;
 
+    // NEW FIELD FOR N-8: Shift Relationship
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "shift_id")
+    private Shift shift;
+
     public Employee() {}
 
     public String getFullName() {
@@ -62,4 +67,8 @@ public class Employee {
     public void setResumeS3Url(String resumeS3Url) { this.resumeS3Url = resumeS3Url; }
     public Organization getOrganization() { return organization; }
     public void setOrganization(Organization organization) { this.organization = organization; }
+    
+    // NEW GETTER AND SETTER FOR SHIFT
+    public Shift getShift() { return shift; }
+    public void setShift(Shift shift) { this.shift = shift; }
 }
