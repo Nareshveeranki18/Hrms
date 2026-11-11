@@ -18,7 +18,7 @@ public class LeaveBalance {
     @Column(name = "leave_type", nullable = false)
     private String leaveType;
 
-    @Column(nullable = false)
+    @Column(name = "leave_year",nullable = false)
     private Integer year;
 
     @Column(nullable = false)

@@ -33,9 +33,11 @@ public class PayrollProcessingService {
     public List<Payroll> processMonthlyPayroll(String monthStr) {
         YearMonth ym;
         try {
-            ym = YearMonth.parse(monthStr); // Expects "YYYY-MM", e.g., "2026-10"
-        } catch (Exception e) {
-            ym = YearMonth.now();
+            ym = YearMonth.parse(monthStr);
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new IllegalArgumentException(
+                "Invalid payroll month."
+            );
         }
 
         LocalDate startOfMonth = ym.atDay(1);

@@ -49,6 +49,7 @@ public class LeavePolicyController {
     @PostMapping("/leave/policies")
     public ResponseEntity<?> createPolicy(@RequestBody LeavePolicy policy, Authentication auth) {
         if (!isAdmin(auth)) {
+        	System.out.println(">>> CREATE POLICY CONTROLLER REACHED");
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("message", "Only HR Admin or Super Admin can create leave policies"));
         }

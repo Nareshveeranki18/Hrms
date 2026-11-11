@@ -28,15 +28,21 @@ public class SecurityConfig {
     }
 
     @Bean
-    UserDetailsService userDetailsService(UserRepository userRepository) { 
+    UserDetailsService userDetailsService(UserRepository userRepository) {
         return username -> {
             com.hrms.backend.entity.User user = userRepository.findByEmail(username)
                     .orElseThrow(() -> new UsernameNotFoundException("User not found in DB"));
-            
+
+            String roleName = user.getRole().getName();
+
             return new org.springframework.security.core.userdetails.User(
                     user.getEmail(),
                     user.getPassword(),
-                    new ArrayList<>()
+                    java.util.Collections.singletonList(
+                            new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                                    roleName.startsWith("ROLE_") ? roleName : "ROLE_" + roleName
+                            )
+                    )
             );
         };
     }
@@ -50,12 +56,16 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/auth/**", "/api/v1/health", "/error", "/api/v1/s3/**").permitAll()
+                .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/organizations").permitAll()
                 
                 // Task N-6: Public access for recruitment endpoints
                 .requestMatchers(HttpMethod.GET, "/api/v1/recruitment/job-openings").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/recruitment/candidates").permitAll()
-                
+                .requestMatchers(HttpMethod.GET, "/api/v1/attendance/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/attendance/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/employees/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/employees").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
