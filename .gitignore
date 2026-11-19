@@ -43,3 +43,5 @@ target/
 # Security
 *.pem
 *.pem.txt
+
+uploads/
