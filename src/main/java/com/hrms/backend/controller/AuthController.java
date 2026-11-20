@@ -5,39 +5,59 @@ import com.hrms.backend.entity.User;
 import com.hrms.backend.repository.RoleRepository;
 import com.hrms.backend.repository.UserRepository;
 import com.hrms.backend.security.JwtUtil;
+import com.hrms.backend.service.EmailService;
 import com.hrms.backend.service.TokenBlacklistService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenBlacklistService tokenBlacklistService;
-    private final RoleRepository roleRepository; // Added RoleRepository
+    private final RoleRepository roleRepository;
+    private final EmailService emailService;
 
-    public AuthController(JwtUtil jwtUtil, UserRepository userRepository, 
+    @Value("${app.frontend-url:http://localhost:3000}")
+    private String frontendUrl;
+
+    // Stores one-time reset tokens with 15-minute expiry (token -> email + expiry)
+    private final Map<String, ResetTokenData> resetTokens = new ConcurrentHashMap<>();
+
+    private record ResetTokenData(String email, Instant expiresAt) {}
+
+    public AuthController(JwtUtil jwtUtil, UserRepository userRepository,
                           PasswordEncoder passwordEncoder, TokenBlacklistService tokenBlacklistService,
-                          RoleRepository roleRepository) {
+                          RoleRepository roleRepository, EmailService emailService) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenBlacklistService = tokenBlacklistService;
         this.roleRepository = roleRepository;
+        this.emailService = emailService;
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> credentials) {
+    public ResponseEntity> login(@RequestBody Map<String, String> credentials) {
         String email = credentials.get("email");
         String password = credentials.get("password");
         Map<String, Object> response = new HashMap<>();
@@ -52,9 +72,8 @@ public class AuthController {
             Map<String, Object> userData = new HashMap<>();
             userData.put("id", user.getId());
             userData.put("email", user.getEmail());
-            // Extract the String name from the Role object to send to the frontend
-            userData.put("role", user.getRole().getName()); 
-            userData.put("fullName", user.getFullName()); 
+            userData.put("role", user.getRole().getName());
+            userData.put("fullName", user.getFullName());
             response.put("user", userData);
 
             return ResponseEntity.ok(response);
@@ -67,7 +86,7 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<Map<String, String>> signup(@RequestBody Map<String, String> userData) {
+    public ResponseEntity> signup(@RequestBody Map<String, String> userData) {
         Map<String, String> response = new HashMap<>();
 
         if (userRepository.findByEmail(userData.get("email")).isPresent()) {
@@ -78,9 +97,8 @@ public class AuthController {
         User newUser = new User();
         newUser.setEmail(userData.get("email"));
         newUser.setPassword(passwordEncoder.encode(userData.get("password")));
-        newUser.setFullName(userData.get("fullName")); 
+        newUser.setFullName(userData.get("fullName"));
 
-        // Fetch the actual Role object from the database using the string name
         String roleName = userData.getOrDefault("role", "EMPLOYEE");
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new RuntimeException("Role not found in database: " + roleName));
@@ -93,7 +111,7 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, String>> logout(HttpServletRequest request) {
+    public ResponseEntity> logout(HttpServletRequest request) {
         Map<String, String> response = new HashMap<>();
         String authHeader = request.getHeader("Authorization");
 
@@ -109,9 +127,67 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> request) {
+    public ResponseEntity> forgotPassword(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
         Map<String, String> response = new HashMap<>();
-        response.put("message", "Password reset link sent to " + request.get("email"));
+
+        if (email == null || email.isBlank()) {
+            response.put("message", "Email is required");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        Optional<User> userOptional = userRepository.findByEmail(email.trim());
+        if (userOptional.isEmpty()) {
+            response.put("message", "No account found with email: " + email);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
+
+        String token = UUID.randomUUID().toString();
+        resetTokens.put(token, new ResetTokenData(email.trim(), Instant.now().plus(15, ChronoUnit.MINUTES)));
+
+        String resetLink = frontendUrl + "/reset-password?token=" + token;
+
+        // Print clearly in backend console for local testing
+        log.info("==========================================================");
+        log.info("PASSWORD RESET REQUESTED FOR: {}", email.trim());
+        log.info("RESET LINK: {}", resetLink);
+        log.info("TOKEN (expires in 15 mins): {}", token);
+        log.info("==========================================================");
+
+        // Trigger EmailService (uses local mock mode until AWS SES is configured)
+        String templateData = "{\"resetLink\":\"" + resetLink + "\"}";
+        emailService.sendTemplatedEmail(email.trim(), "PasswordResetTemplate", templateData);
+
+        response.put("message", "Password reset link sent to " + email.trim());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity> resetPassword(@RequestBody Map<String, String> request) {
+        String token = request.get("token");
+        String newPassword = request.get("newPassword");
+        Map<String, String> response = new HashMap<>();
+
+        if (token == null || token.isBlank() || newPassword == null || newPassword.isBlank()) {
+            response.put("message", "Both token and newPassword are required");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        ResetTokenData tokenData = resetTokens.get(token);
+        if (tokenData == null || Instant.now().isAfter(tokenData.expiresAt())) {
+            resetTokens.remove(token);
+            response.put("message", "Invalid or expired reset token");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        User user = userRepository.findByEmail(tokenData.email())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        resetTokens.remove(token);
+
+        response.put("message", "Password has been reset successfully");
         return ResponseEntity.ok(response);
     }
 }
