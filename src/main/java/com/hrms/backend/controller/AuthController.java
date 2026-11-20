@@ -57,7 +57,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity> login(@RequestBody Map<String, String> credentials) {
+    public ResponseEntity<?> login(@RequestBody Map<String, String> credentials) {
         String email = credentials.get("email");
         String password = credentials.get("password");
         Map<String, Object> response = new HashMap<>();
@@ -86,7 +86,7 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity> signup(@RequestBody Map<String, String> userData) {
+    public ResponseEntity<?> signup(@RequestBody Map<String, String> userData) {
         Map<String, String> response = new HashMap<>();
 
         if (userRepository.findByEmail(userData.get("email")).isPresent()) {
@@ -111,7 +111,7 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity> logout(HttpServletRequest request) {
+    public ResponseEntity<?> logout(HttpServletRequest request) {
         Map<String, String> response = new HashMap<>();
         String authHeader = request.getHeader("Authorization");
 
@@ -127,7 +127,7 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity> forgotPassword(@RequestBody Map<String, String> request) {
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
         String email = request.get("email");
         Map<String, String> response = new HashMap<>();
 
@@ -163,7 +163,7 @@ public class AuthController {
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity> resetPassword(@RequestBody Map<String, String> request) {
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
         String token = request.get("token");
         String newPassword = request.get("newPassword");
         Map<String, String> response = new HashMap<>();
