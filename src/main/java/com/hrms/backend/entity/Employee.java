@@ -25,6 +25,9 @@ public class Employee {
     private String department;   // Matches "Department" column
     private String designation;  // Matches "Designation" column
     private String status = "ACTIVE"; // Matches "Status" column
+    
+    @Column(name = "state")
+    private String state; // e.g., "Telangana", "Maharashtra", "Karnataka"
 
     @Column(name = "resume_s3_url")
     private String resumeS3Url;
@@ -43,6 +46,13 @@ public class Employee {
 
     public String getFullName() {
         return firstName + " " + lastName;
+    }
+    public String getState() {
+        return state;
+    }
+
+    public void setState(String state) {
+        this.state = state;
     }
 
     public Long getId() { return id; }

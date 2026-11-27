@@ -14,6 +14,9 @@ public class Payroll {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    
+    @Column(name = "batch_id")
+    private Long batchId;
 
     @Column(name = "employee_id", nullable = false)
     private Long employeeId;
@@ -49,6 +52,13 @@ public class Payroll {
     public void addItem(PayrollItem item) {
         items.add(item);
         item.setPayroll(this);
+    }
+    public Long getBatchId() {
+        return batchId;
+    }
+
+    public void setBatchId(Long batchId) {
+        this.batchId = batchId;
     }
 
     public Long getId() { return id; }
